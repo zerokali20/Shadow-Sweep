@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow-Sweep: Project Blueprint & Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #1e293b; /* Slate 800 */
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+
+        /* Custom Scrollbar for Logs */
+        .log-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .log-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .log-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .log-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .nav-active {
+            border-bottom: 2px solid #0ea5e9; /* Sky 500 */
+            color: #0ea5e9;
+        }
+
+        .logic-card {
+            transition: all 0.3s ease;
+        }
+        .logic-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .logic-card.active {
+            border-color: #0ea5e9;
+            background-color: #f0f9ff;
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutral Background (Slate-50) with Technical Accents (Sky Blue, Slate Gray, Emerald Green). Fits "Light & Clean" requirement while maintaining engineering aesthetic. -->
+    <!-- Application Structure Plan:
+        1. "Mission Control" (Home): High-level overview to establish context.
+        2. "The Logic Engine" (Concept): Interactive breakdown of the 3 detection methods. Users click methods to see how packets are analyzed.
+        3. "Build Roadmap" (Implementation): Split into Core, Features, and Stack.
+        4. "Live Simulation" (Demo): The "Wow" factor. A mock dashboard showing what the final Python tool would output, proving the concept.
+        Reasoning: Moves from "Why" -> "How" -> "What" -> "Show Me".
+    -->
+    <!-- Visualization & Content Choices:
+        1. Detection Logic: CSS Grid/Flex layout with interactive cards. Goal: Explain complex fingerprinting simply.
+        2. Roadmap: Step-by-step card layout. Goal: Clear implementation path.
+        3. Simulation Charts: Chart.js Line Chart for traffic flow (burst detection) and Pie Chart for AI Service usage. Goal: Visualize the data mentioned in the report (Volume/Flow, AI Database).
+        4. Live Log: Scrolling text box. Goal: Mimic the CLI output of the Scapy engine described.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <span class="text-xl font-bold tracking-tight text-slate-800">
+                        <span class="text-sky-600">Shadow</span>-Sweep
+                    </span>
+                </div>
+                <div class="hidden sm:flex space-x-8 items-center">
+                    <button onclick="navTo('section-briefing')" class="nav-btn nav-active px-3 py-2 text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors" data-target="section-briefing">Briefing</button>
+                    <button onclick="navTo('section-logic')" class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors" data-target="section-logic">Logic Engine</button>
+                    <button onclick="navTo('section-roadmap')" class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors" data-target="section-roadmap">Roadmap</button>
+                    <button onclick="navTo('section-simulation')" class="nav-btn px-3 py-2 text-sm font-medium text-slate-600 hover:text-sky-600 transition-colors" data-target="section-simulation">Live Demo</button>
+                </div>
+                <!-- Mobile menu button simplified -->
+                <div class="flex items-center sm:hidden">
+                    <button onclick="toggleMobileMenu()" class="text-slate-500 hover:text-slate-800 focus:outline-none">Menu</button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Nav Panel -->
+        <div id="mobile-menu" class="hidden sm:hidden bg-white border-b border-slate-200">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="navTo('section-briefing')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Briefing</button>
+                <button onclick="navTo('section-logic')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Logic Engine</button>
+                <button onclick="navTo('section-roadmap')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Roadmap</button>
+                <button onclick="navTo('section-simulation')" class="block w-full text-left px-3 py-2 text-base font-medium text-slate-600 hover:bg-slate-50">Live Demo</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-12">
+
+        <!-- SECTION 1: BRIEFING -->
+        <section id="section-briefing" class="space-y-6 animate-fade-in">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div class="border-l-4 border-sky-500 pl-6 mb-6">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">Project Briefing</h1>
+                    <p class="text-slate-500 text-lg">Target: Network-Level Detection of Unauthorized AI Usage</p>
+                </div>
+                
+                <p class="text-slate-700 leading-relaxed mb-6">
+                    Welcome to the <strong>Shadow-Sweep</strong> blueprint. In the current cybersecurity landscape (2026), detecting "Shadow AI"—the unauthorized use of AI tools by employees—is a critical challenge. Because most AI traffic is encrypted (HTTPS), traditional content filtering fails. This project demonstrates advanced engineering skills by using <strong>fingerprinting techniques</strong> to identify AI traffic patterns without breaking encryption.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <div class="text-sky-600 text-2xl font-bold mb-2">01</div>
+                        <h3 class="font-semibold text-slate-900 mb-2">The Problem</h3>
+                        <p class="text-sm text-slate-600">Companies fear data exfiltration via AI. Prompts are encrypted, making direct content inspection impossible.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <div class="text-sky-600 text-2xl font-bold mb-2">02</div>
+                        <h3 class="font-semibold text-slate-900 mb-2">The Solution</h3>
+                        <p class="text-sm text-slate-600">A Python-based sniffer (Scapy) that analyzes traffic metadata: Destination IPs, Packet Bursts, and TLS Handshakes.</p>
+                    </div>
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-200">
+                        <div class="text-sky-600 text-2xl font-bold mb-2">03</div>
+                        <h3 class="font-semibold text-slate-900 mb-2">Career Value</h3>
+                        <p class="text-sm text-slate-600">Demonstrates proficiency in low-level networking, real-time data processing, and security analysis.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: LOGIC ENGINE -->
+        <section id="section-logic" class="space-y-6 hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-slate-900">The "Shadow-Sweep" Logic</h2>
+                    <p class="text-slate-600 mt-2">
+                        How do we see the invisible? Since we cannot read the encrypted content, we must rely on <strong>Traffic Fingerprinting</strong>. 
+                        Click on the detection modules below to understand the analysis process.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Interactive Selectors -->
+                    <div class="space-y-4">
+                        <div id="logic-dns" onclick="selectLogic('dns')" class="logic-card active cursor-pointer p-5 rounded-lg border-2 border-sky-500 bg-sky-50">
+                            <h3 class="font-bold text-slate-900 flex items-center">
+                                <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center mr-3 text-xs">A</span>
+                                Destination DNS/IP
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-2">The most basic check. Where is the packet going?</p>
+                        </div>
+                        <div id="logic-flow" onclick="selectLogic('flow')" class="logic-card cursor-pointer p-5 rounded-lg border-2 border-slate-200 bg-white hover:border-sky-300">
+                            <h3 class="font-bold text-slate-900 flex items-center">
+                                <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mr-3 text-xs">B</span>
+                                Traffic Volume & Flow
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-2">Identifying the "AI Burst" pattern.</p>
+                        </div>
+                        <div id="logic-tls" onclick="selectLogic('tls')" class="logic-card cursor-pointer p-5 rounded-lg border-2 border-slate-200 bg-white hover:border-sky-300">
+                            <h3 class="font-bold text-slate-900 flex items-center">
+                                <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mr-3 text-xs">C</span>
+                                TLS Handshake Analysis
+                            </h3>
+                            <p class="text-sm text-slate-600 mt-2">Peeking at the Server Name Indication (SNI).</p>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Explanation Area -->
+                    <div class="lg:col-span-2 bg-slate-900 rounded-lg p-6 text-slate-300 font-mono shadow-inner flex flex-col justify-center relative overflow-hidden">
+                        <!-- Abstract Background Decoration -->
+                        <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl select-none">DATA</div>
+
+                        <div id="logic-display-dns" class="logic-content">
+                            <h4 class="text-sky-400 font-bold text-lg mb-4">// METHOD A: DNS/IP LOOKUP</h4>
+                            <p class="mb-4">The tool maintains a <span class="text-white">list of unauthorized AI domains</span> (e.g., api.openai.com, claude.ai).</p>
+                            <div class="bg-black/50 p-4 rounded border border-slate-700 mb-4">
+                                <p class="text-xs text-slate-500"># Pseudo-code Check</p>
+                                <p class="text-green-400">if <span class="text-white">packet.dst_ip</span> in <span class="text-yellow-400">KNOWN_AI_IPS</span>:</p>
+                                <p class="pl-4 text-white">alert("Shadow AI Detected via IP Blocklist")</p>
+                            </div>
+                            <p class="text-sm text-slate-400">Limit: IPs change frequently. Requires constant maintenance of the "AI-Database".</p>
+                        </div>
+
+                        <div id="logic-display-flow" class="logic-content hidden">
+                            <h4 class="text-sky-400 font-bold text-lg mb-4">// METHOD B: BURST PATTERN ANALYSIS</h4>
+                            <p class="mb-4">AI interactions have a unique shape: <span class="text-white">Small Request</span> (Prompt) &rarr; <span class="text-white">Long Response</span> (Generation).</p>
+                            <div class="flex items-center space-x-2 mb-4 p-4 bg-slate-800 rounded">
+                                <div class="h-2 w-4 bg-yellow-500 rounded"></div>
+                                <span class="text-xs">Out (1KB)</span>
+                                <span class="text-slate-500 mx-2">.......... Wait ..........</span>
+                                <div class="h-2 w-24 bg-green-500 rounded"></div>
+                                <span class="text-xs">In (500KB Stream)</span>
+                            </div>
+                            <p class="text-sm text-slate-400">Heuristic: "If Out < 5KB AND In > 50KB within 2s -> Probable AI Query."</p>
+                        </div>
+
+                        <div id="logic-display-tls" class="logic-content hidden">
+                            <h4 class="text-sky-400 font-bold text-lg mb-4">// METHOD C: TLS SNI INSPECTION</h4>
+                            <p class="mb-4">Before encryption fully locks the connection, the client sends a <span class="text-white">Client Hello</span> packet containing the target server name (SNI).</p>
+                            <div class="bg-black/50 p-4 rounded border border-slate-700 mb-4">
+                                <p class="text-xs text-slate-500"># Scapy Packet Inspection</p>
+                                <p class="text-white">sni_field = packet[TLS].handshake.extensions.server_name</p>
+                                <p class="text-green-400">if <span class="text-white">"openai.com"</span> in <span class="text-yellow-400">sni_field</span>:</p>
+                                <p class="pl-4 text-white">return <span class="text-red-400">True</span></p>
+                            </div>
+                            <p class="text-sm text-slate-400">Benefit: Identifies the service even if the specific IP is unknown.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: ROADMAP -->
+        <section id="section-roadmap" class="space-y-6 hidden">
+             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-900">Technical Roadmap</h2>
+                    <p class="text-slate-600 mt-2">
+                        A phased approach to building the Shadow-Sweep tool, moving from a basic prototype to a resume-ready portfolio piece.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Phase 1 -->
+                    <div class="bg-slate-50 rounded-lg p-6 border border-slate-200">
+                        <div class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-bold mb-4">PHASE 1</div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">The Core Engine</h3>
+                        <p class="text-sm text-slate-600 mb-4">Establish the packet sniffer using Python and Scapy.</p>
+                        <ul class="space-y-2 text-sm text-slate-700">
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> Setup Scapy sniffing loop</li>
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> Filter for TCP Port 443</li>
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> Basic IP extraction</li>
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> Thread management (no drops)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Phase 2 -->
+                    <div class="bg-slate-50 rounded-lg p-6 border border-slate-200 relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-16 h-16 bg-sky-100 rounded-bl-full -mr-8 -mt-8"></div>
+                        <div class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-sky-100 text-sky-700 text-xs font-bold mb-4">PHASE 2</div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Features & Intelligence</h3>
+                        <p class="text-sm text-slate-600 mb-4">Add logic to make the data actionable and meaningful.</p>
+                        <ul class="space-y-2 text-sm text-slate-700">
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> <strong>AI-Database:</strong> JSON map of IPs</li>
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> <strong>Dashboard:</strong> Web UI (Flask/Streamlit)</li>
+                            <li class="flex items-start"><span class="text-sky-500 mr-2">✓</span> <strong>Alerting:</strong> Logic for >50MB/min exfiltration</li>
+                        </ul>
+                    </div>
+
+                    <!-- Phase 3 -->
+                    <div class="bg-slate-50 rounded-lg p-6 border border-slate-200">
+                        <div class="inline-flex items-center justify-center px-3 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-bold mb-4">TECH STACK</div>
+                        <h3 class="text-lg font-bold text-slate-900 mb-2">Recommended Tools</h3>
+                        <p class="text-sm text-slate-600 mb-4">Chosen for speed of prototyping and network access.</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
+                                <span>Core Lang</span>
+                                <span class="font-mono font-bold">Python</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
+                                <span>Sniffing</span>
+                                <span class="font-mono font-bold">Scapy</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
+                                <span>Analysis</span>
+                                <span class="font-mono font-bold">Pandas</span>
+                            </div>
+                            <div class="flex justify-between items-center text-sm border-b border-slate-200 pb-2">
+                                <span>OS</span>
+                                <span class="font-mono font-bold">Linux (Kali/Ubuntu)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </section>
+
+        <!-- SECTION 4: SIMULATION -->
+        <section id="section-simulation" class="space-y-6 hidden">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:p-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Prototype Dashboard Simulation</h2>
+                        <p class="text-slate-600 mt-1 text-sm">
+                            This demonstrates the "Usage Dashboard" feature (Phase 2). It simulates real-time packet capture, identifying AI bursts vs. normal traffic.
+                        </p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex space-x-3">
+                        <button id="sim-control-btn" onclick="toggleSimulation()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-2 px-4 rounded shadow-sm transition-colors flex items-center">
+                            <span id="sim-status-icon" class="w-2 h-2 rounded-full bg-white mr-2 animate-pulse"></span>
+                            <span id="sim-btn-text">Start Monitor</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    <!-- Left: Live Log -->
+                    <div class="lg:col-span-1 flex flex-col h-full min-h-[400px]">
+                        <div class="bg-slate-900 rounded-t-lg p-3 border-b border-slate-700 flex justify-between items-center">
+                            <span class="text-slate-300 font-mono text-xs uppercase tracking-wider">Scapy Output Log</span>
+                            <span class="text-xs text-emerald-400 font-mono">interface: eth0</span>
+                        </div>
+                        <div id="sim-log" class="bg-slate-900 flex-grow p-4 font-mono text-xs text-slate-400 overflow-y-auto log-scroll h-96 rounded-b-lg border border-slate-800 shadow-inner leading-relaxed">
+                            <p class="text-slate-500">[*] Shadow-Sweep initialized...</p>
+                            <p class="text-slate-500">[*] Loading AI-Database signatures...</p>
+                            <p class="text-slate-500">[*] Ready. Click 'Start Monitor' to begin sniffing.</p>
+                        </div>
+                        
+                        <!-- Mini Stat Cards -->
+                        <div class="grid grid-cols-2 gap-3 mt-4">
+                            <div class="bg-white p-3 rounded border border-slate-200 shadow-sm">
+                                <div class="text-xs text-slate-500 uppercase">Packets Analyzed</div>
+                                <div id="stat-packets" class="text-xl font-bold text-slate-800 font-mono">0</div>
+                            </div>
+                            <div class="bg-white p-3 rounded border border-slate-200 shadow-sm">
+                                <div class="text-xs text-red-500 uppercase">AI Detected</div>
+                                <div id="stat-threats" class="text-xl font-bold text-red-600 font-mono">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Visualizations -->
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        <!-- Line Chart: Traffic Flow -->
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                            <div class="mb-2 flex justify-between items-center">
+                                <h3 class="text-sm font-bold text-slate-700">Network Traffic Analysis (MB/s)</h3>
+                                <span class="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded">Real-time</span>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="trafficChart"></canvas>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-2 text-center">Spikes indicate potential large payload responses (Generative AI output).</p>
+                        </div>
+
+                        <!-- Pie Chart: AI Service Usage -->
+                        <div class="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                            <div class="mb-2">
+                                <h3 class="text-sm font-bold text-slate-700">Detected Service Distribution</h3>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="usageChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-slate-500 text-sm">Generated for the Shadow-Sweep Project Blueprint.</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- State Management ---
+        const state = {
+            currentSection: 'section-briefing',
+            simulationRunning: false,
+            packetsCount: 0,
+            threatsCount: 0,
+            simInterval: null,
+            aiServices: {
+                'OpenAI (ChatGPT)': 0,
+                'Anthropic (Claude)': 0,
+                'Google (Gemini)': 0,
+                'Perplexity': 0
+            }
+        };
+
+        // --- Navigation Logic ---
+        function navTo(targetId) {
+            // Update UI State
+            document.querySelectorAll('section').forEach(sec => sec.classList.add('hidden'));
+            document.getElementById(targetId).classList.remove('hidden');
+            
+            // Update Buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('nav-active');
+                if(btn.dataset.target === targetId) btn.classList.add('nav-active');
+            });
+
+            // Close mobile menu if open
+            document.getElementById('mobile-menu').classList.add('hidden');
+
+            state.currentSection = targetId;
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // --- Logic Engine Interactivity ---
+        function selectLogic(type) {
+            // Reset cards
+            document.querySelectorAll('.logic-card').forEach(c => {
+                c.classList.remove('active', 'bg-sky-50', 'border-sky-500');
+                c.classList.add('border-slate-200', 'bg-white');
+            });
+            
+            // Activate selected
+            const activeCard = document.getElementById(`logic-${type}`);
+            activeCard.classList.remove('border-slate-200', 'bg-white');
+            activeCard.classList.add('active', 'bg-sky-50', 'border-sky-500');
+
+            // Show content
+            document.querySelectorAll('.logic-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById(`logic-display-${type}`).classList.remove('hidden');
+        }
+
+        // --- Simulation Logic ---
+        
+        // Chart Instances
+        let trafficChartInstance = null;
+        let usageChartInstance = null;
+
+        function initCharts() {
+            // Line Chart (Traffic)
+            const ctxTraffic = document.getElementById('trafficChart').getContext('2d');
+            trafficChartInstance = new Chart(ctxTraffic, {
+                type: 'line',
+                data: {
+                    labels: Array(20).fill(''),
+                    datasets: [{
+                        label: 'Throughput (KB/s)',
+                        data: Array(20).fill(10),
+                        borderColor: '#0ea5e9', // Sky 500
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, max: 1000 },
+                        x: { display: false }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+
+            // Pie Chart (Usage)
+            const ctxUsage = document.getElementById('usageChart').getContext('2d');
+            usageChartInstance = new Chart(ctxUsage, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(state.aiServices),
+                    datasets: [{
+                        data: [1, 1, 1, 1], // Init with equal small values for visual
+                        backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'right' }
+                    }
+                }
+            });
+        }
+
+        function toggleSimulation() {
+            const btn = document.getElementById('sim-control-btn');
+            const btnText = document.getElementById('sim-btn-text');
+            const statusIcon = document.getElementById('sim-status-icon');
+
+            if (state.simulationRunning) {
+                // Stop
+                clearInterval(state.simInterval);
+                state.simulationRunning = false;
+                btn.classList.remove('bg-red-600', 'hover:bg-red-700');
+                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                btnText.innerText = "Start Monitor";
+                statusIcon.classList.remove('bg-red-200');
+                statusIcon.classList.add('bg-white');
+                addLog("[*] Monitoring stopped.");
+            } else {
+                // Start
+                state.simulationRunning = true;
+                btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                btn.classList.add('bg-red-600', 'hover:bg-red-700');
+                btnText.innerText = "Stop Monitor";
+                statusIcon.classList.remove('bg-white');
+                statusIcon.classList.add('bg-red-200');
+                addLog("[*] Sniffer thread started on port 443...");
+                
+                state.simInterval = setInterval(simulationTick, 800);
+            }
+        }
+
+        function simulationTick() {
+            // 1. Update Packet Count
+            state.packetsCount += Math.floor(Math.random() * 15) + 5;
+            document.getElementById('stat-packets').innerText = state.packetsCount.toLocaleString();
+
+            // 2. Determine Traffic Type (Normal vs AI Spike)
+            const isAISpike = Math.random() > 0.7;
+            let currentTraffic = 0;
+
+            if (isAISpike) {
+                // AI Traffic Simulation
+                state.threatsCount++;
+                document.getElementById('stat-threats').innerText = state.threatsCount;
+                
+                // Pick a service
+                const services = Object.keys(state.aiServices);
+                const randomService = services[Math.floor(Math.random() * services.length)];
+                state.aiServices[randomService]++;
+                
+                // High throughput spike
+                currentTraffic = Math.floor(Math.random() * 500) + 400; // 400-900 KB/s
+                
+                // Log it
+                const randomIP = `104.22.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+                addLog(`[!] AI TRAFFIC DETECTED | Dest: ${randomService} (${randomIP}) | TLS SNI Match`);
+                
+                // Anomaly Alert Check (Simulated 50MB rule from report)
+                if (Math.random() > 0.9) {
+                    addLog(`[ALERT] HIGH VOLUME EXFILTRATION DETECTED! >50MB to ${randomService}`, 'text-red-400 font-bold');
+                }
+
+            } else {
+                // Normal Traffic
+                currentTraffic = Math.floor(Math.random() * 100) + 20; // 20-120 KB/s
+                if (Math.random() > 0.8) {
+                    addLog(`[+] Normal TCP Packet | 443 -> 192.168.1.5`);
+                }
+            }
+
+            // 3. Update Traffic Chart
+            const tData = trafficChartInstance.data.datasets[0].data;
+            tData.shift();
+            tData.push(currentTraffic);
+            trafficChartInstance.update();
+
+            // 4. Update Usage Chart
+            usageChartInstance.data.datasets[0].data = Object.values(state.aiServices);
+            usageChartInstance.update();
+        }
+
+        function addLog(message, classes = '') {
+            const logBox = document.getElementById('sim-log');
+            const entry = document.createElement('div');
+            entry.className = `mb-1 ${classes}`;
+            // Timestamp
+            const now = new Date();
+            const time = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+            entry.innerHTML = `<span class="text-slate-600 mr-2">[${time}]</span>${message}`;
+            
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initCharts();
+            // Start with first section active
+            navTo('section-briefing');
+        });
+
+    </script>
+</body>
+</html>
